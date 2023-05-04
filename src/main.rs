@@ -30,10 +30,24 @@ enum Command {
         /// Name of list to delete
         name: String,
     },
+    /// Shift focus to provided list
+    Focus {
+        /// Name of list to focus
+        name: String,
+    },
     /// List of existing todolists
     List,
     /// List of existing todolists
     Ls,
+
+    /// Lists tasks within focused todolist
+    Tasks,
+    /// Add a task to the focused todolist
+    Add {
+        /// Task(s) as strings to add to the focused list
+        #[arg(required=true)]
+        task: Vec<String>,
+    },
 }
 
 
@@ -106,10 +120,23 @@ fn main() {
             list_file.to_file(".todolists");
         },
 
+        Command::Focus { name } => {
+            ensure_valid_list_name(&name);
+
+            // read in todolist file
+            let mut list_file = ListFile::from_file(".todolists");
+
+            // shift focus
+            list_file.shift_focus(name);
+            
+            // write todolist file
+            list_file.to_file(".todolists");
+        }
+        
         Command::List | Command::Ls => {
             // read in todolist file
             let list_file = ListFile::from_file(".todolists");
-
+            
             // collect list names
             let mut names: Vec<&String> = list_file.lists.keys().collect();
             // sort list names
@@ -131,5 +158,35 @@ fn main() {
                 }
             }
         }
+
+
+
+        Command::Tasks => {
+            // read in todolist file
+            let mut list_file = ListFile::from_file(".todolists");
+
+            // access focused todolist
+            let list = list_file.get_focused();
+
+            // print tasks
+            println!("-- {} --", list.name);
+            for t in &list.tasks {
+                println!("{t}");
+            }
+        },
+        
+        Command::Add { task } => {
+            // read in todolist file
+            let mut list_file = ListFile::from_file(".todolists");
+            
+            // access focused todolist
+            let list = list_file.get_focused();
+            
+            // add new task
+            list.add_tasks(task);
+            
+            // write todolist file
+            list_file.to_file(".todolists");
+        },
     }
 }

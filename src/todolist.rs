@@ -1,4 +1,4 @@
-use std::{collections::HashMap, process::exit, io::{stdin, stdout, Write}};
+use std::{collections::HashMap, process::exit, io::{stdin, stdout, Write}, fmt::Display};
 
 use serde::{Serialize, Deserialize};
 
@@ -60,7 +60,8 @@ impl ListFile {
     }
 
     /// Deletes list with given name
-    /// Confirms user selection
+    /// Confirms user selection with a list name retype
+    /// Exits with error if there no such list or an input mismatch
     pub fn delete_list(&mut self, name: String) {
         // check that list exists
         if !self.lists.contains_key(&name) {
@@ -97,6 +98,32 @@ impl ListFile {
         println!("Successfully deleted '{}'", name);
     }
 
+    /// Shifts focused list to the given
+    /// Exits with error if list doesn't exist
+    pub fn shift_focus(&mut self, name: String) {
+        // check that list exists
+        if !self.lists.contains_key(&name) {
+            println!("No todolist '{}'", &name);
+            exit(1);
+        }
+
+        // shift focus
+        self.focused = Some(name);
+    }
+
+    /// Returns TodoList currently focused
+    /// Exits with error if no list is focused
+    pub fn get_focused(&mut self) -> &mut TodoList {
+        // check that there's a focused list
+        if self.focused.is_none() {
+            println!("You have no lists");
+            exit(1);
+        }
+
+        // access list
+        self.lists.get_mut(self.focused.as_ref().unwrap()).unwrap()
+    }
+
     
 }
 
@@ -116,6 +143,18 @@ impl TodoList {
             tasks: Vec::new(),
         }
     }
+
+    /// Add task(s) to the todolist
+    pub fn add_tasks(&mut self, tasks: Vec<String>) {
+        for t in tasks {
+            self.tasks.push(
+                Task {
+                    title: t,
+                    complete: false,
+                }
+            )
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -123,4 +162,10 @@ pub struct Task {
     pub title: String,
     // pub due: String,
     pub complete: bool,
+}
+
+impl Display for Task {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} {}", if self.complete { "x" } else { "o" }, self.title)
+    }
 }
