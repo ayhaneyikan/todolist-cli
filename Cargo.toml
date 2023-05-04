@@ -1,0 +1,13 @@
+[package]
+name = "todo"
+version = "0.1.0"
+edition = "2021"
+authors = ["Ayhan Eyikan <ayhaneyikan@outlook.com>"]
+description = "A friendly CLI for creating and modifying todo-lists"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+clap = { version = "4.2.7", features = ["derive"] }
+serde = { version = "1.0.160", features = ["derive"] }
+serde_json = "1.0.96"
