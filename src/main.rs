@@ -42,11 +42,31 @@ enum Command {
 
     /// Lists tasks within focused todolist
     Tasks,
+    /// Lists tasks within focused todolist
+    Ts,
     /// Add a task to the focused todolist
     Add {
         /// Task(s) as strings to add to the focused list
         #[arg(required=true)]
         task: Vec<String>,
+    },
+    /// Drops given task(s) from the focused todolist
+    Drop {
+        /// Index(ices) of task(s) to delete from the focused list
+        #[arg(required=true)]
+        index: Vec<usize>,
+    },
+    /// Marks given task(s) as complete
+    Done {
+        /// Index(ices) of task(s) to mark as complete
+        #[arg(required=true)]
+        index: Vec<usize>,
+    },
+    /// Marks given task(s) as incomplete
+    Undone {
+        /// Index(ices) of task(s) to mark as incomplete
+        #[arg(required=true)]
+        index: Vec<usize>,
     },
 }
 
@@ -76,11 +96,12 @@ todo add 'task1 for this class' 'task2 for other class'
 }
 
 fn main() {
+    const LISTS_PATH: &str = "/home/ayhan/.todolists";
 
     match CLI::parse().command {
         Command::Init => {
             // check if already initialized
-            if std::path::Path::new(".todolists").exists() {
+            if std::path::Path::new(LISTS_PATH).exists() {
                 println!("Todolist has already been initialized");
                 exit(1);
             }
@@ -90,7 +111,7 @@ fn main() {
             // serialize with bincode
             let encoded = bincode::serialize(&list_file).unwrap();
             // write to file
-            std::fs::write(".todolists", encoded).unwrap();
+            std::fs::write(LISTS_PATH, encoded).unwrap();
             println!("Todolists initialized");
         },
 
@@ -98,44 +119,44 @@ fn main() {
             ensure_valid_list_name(&name);
 
             // read in todolist file
-            let mut list_file = ListFile::from_file(".todolists");
+            let mut list_file = ListFile::from_file(LISTS_PATH);
 
             // create new list representation
             list_file.add_list(name);
             
             // write todolist file
-            list_file.to_file(".todolists");
+            list_file.to_file(LISTS_PATH);
         },
         
         Command::Delete { name } => {
             ensure_valid_list_name(&name);
             
             // read in todolist file
-            let mut list_file = ListFile::from_file(".todolists");
+            let mut list_file = ListFile::from_file(LISTS_PATH);
             
             // delete desired list
             list_file.delete_list(name);
             
             // write todolist file
-            list_file.to_file(".todolists");
+            list_file.to_file(LISTS_PATH);
         },
 
         Command::Focus { name } => {
             ensure_valid_list_name(&name);
 
             // read in todolist file
-            let mut list_file = ListFile::from_file(".todolists");
+            let mut list_file = ListFile::from_file(LISTS_PATH);
 
             // shift focus
             list_file.shift_focus(name);
             
             // write todolist file
-            list_file.to_file(".todolists");
+            list_file.to_file(LISTS_PATH);
         }
         
         Command::List | Command::Ls => {
             // read in todolist file
-            let list_file = ListFile::from_file(".todolists");
+            let list_file = ListFile::from_file(LISTS_PATH);
             
             // collect list names
             let mut names: Vec<&String> = list_file.lists.keys().collect();
@@ -161,23 +182,25 @@ fn main() {
 
 
 
-        Command::Tasks => {
+        Command::Tasks | Command::Ts => {
             // read in todolist file
-            let mut list_file = ListFile::from_file(".todolists");
+            let mut list_file = ListFile::from_file(LISTS_PATH);
 
             // access focused todolist
             let list = list_file.get_focused();
 
             // print tasks
+            let mut i = 1;
             println!("-- {} --", list.name);
             for t in &list.tasks {
-                println!("{t}");
+                println!("{i}| {t}");
+                i += 1;
             }
         },
         
         Command::Add { task } => {
             // read in todolist file
-            let mut list_file = ListFile::from_file(".todolists");
+            let mut list_file = ListFile::from_file(LISTS_PATH);
             
             // access focused todolist
             let list = list_file.get_focused();
@@ -186,7 +209,48 @@ fn main() {
             list.add_tasks(task);
             
             // write todolist file
-            list_file.to_file(".todolists");
+            list_file.to_file(LISTS_PATH);
         },
+
+        Command::Drop { index } => {
+            // read in todolist file
+            let mut list_file = ListFile::from_file(LISTS_PATH);
+
+            // access focused todolist
+            let list = list_file.get_focused();
+
+            // drop tasks
+            list.drop_tasks(index);
+
+            // write todolist file
+            list_file.to_file(LISTS_PATH);
+        },
+        
+        Command::Done { index } => {
+            // read in todolist file
+            let mut list_file = ListFile::from_file(LISTS_PATH);
+
+            // access focused todolist
+            let list = list_file.get_focused();
+
+            // mark tasks as done
+            list.update_completions(index, true);
+
+            // write todolist file
+            list_file.to_file(LISTS_PATH);
+        },
+        Command::Undone { index } => {
+            // read in todolist file
+            let mut list_file = ListFile::from_file(LISTS_PATH);
+
+            // access focused todolist
+            let list = list_file.get_focused();
+
+            // mark tasks as undone
+            list.update_completions(index, false);
+
+            // write todolist file
+            list_file.to_file(LISTS_PATH);
+        }
     }
 }

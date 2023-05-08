@@ -155,6 +155,44 @@ impl TodoList {
             )
         }
     }
+    
+    /// Helper func to sort, dedup, and reverse a list of usize
+    fn sort_uniq_reverse(mut l: Vec<usize>) -> Vec<usize> {
+        // remove duplicate indices
+        l.sort();
+        l.dedup();
+        l.reverse();  // reverse so that indices don't change
+
+        // decrement each value
+        for i in l.iter_mut() {
+            *i -= 1;
+        }
+        l
+    }
+
+    /// Drop task(s) from the todolist
+    pub fn drop_tasks(&mut self, mut index: Vec<usize>) {
+        index = Self::sort_uniq_reverse(index);
+
+        // drop them from the list
+        for i in index {
+            if i < self.tasks.len() {
+                self.tasks.remove(i);
+            }
+        }
+    }
+
+    /// Update task(s) as complete or incomplete
+    pub fn update_completions(&mut self, mut index: Vec<usize>, complete: bool) {
+        index = Self::sort_uniq_reverse(index);
+
+        // mark each task as complete
+        for i in index {
+            if i < self.tasks.len() {
+                self.tasks.get_mut(i).unwrap().complete = complete;
+            }
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
