@@ -96,7 +96,7 @@ todo add 'task1 for this class' 'task2 for other class'
 }
 
 fn main() {
-    const LISTS_PATH: &str = "/home/ayhan/.todolists";
+    const LISTS_PATH: &str = "~/.todolists";
 
     match CLI::parse().command {
         Command::Init => {
