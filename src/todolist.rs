@@ -204,6 +204,6 @@ pub struct Task {
 
 impl Display for Task {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} {}", if self.complete { "x" } else { "o" }, self.title)
+        write!(f, "{} {}", if self.complete { "✓" } else { "✕" }, self.title)
     }
 }
