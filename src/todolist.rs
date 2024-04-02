@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Display, io::{stdin, stdout, Write}, process::exit};
+use std::{collections::HashMap, fmt::Display, io::{self, Write}, process::exit};
 
 use serde::{Serialize, Deserialize};
 
@@ -22,13 +22,6 @@ impl ListFile {
         }
     }
 
-    /// Serializes ListFile and writes it to file
-    pub fn to_file(&self, file_path: &str) {
-        let encoded = bincode::serialize(&self).expect("Error: failed to serialize ListFile");
-        // overwrite old file
-        std::fs::write(file_path, encoded).expect("Error: failed to write serialized ListFile to file");
-    }
-
     /// Read from file and deserialize ListFile.
     pub fn from_file(file_path: &str) -> Self {
         // confirm that the listfile exists
@@ -40,6 +33,13 @@ impl ListFile {
         // read file contents and deserialize
         let contents = std::fs::read_to_string(file_path).expect("Error: failed to read ListFile from file");
         bincode::deserialize(contents.as_bytes()).expect("Error: failed to deserialize ListFile")
+    }
+
+    /// Serializes ListFile and writes it to file
+    pub fn to_file(&self, file_path: &str) {
+        let encoded = bincode::serialize(&self).expect("Error: failed to serialize ListFile");
+        // overwrite old file
+        std::fs::write(file_path, encoded).expect("Error: failed to write serialized ListFile to file");
     }
 
     /// Create new list within the ListFile.
@@ -61,43 +61,44 @@ impl ListFile {
         Ok(())
     }
 
-    /// Deletes list with given name
-    /// Confirms user selection with a list name retype
-    /// Exits with error if there no such list or an input mismatch
-    pub fn delete_list(&mut self, name: String) {
-        // check that list exists
-        if !self.lists.contains_key(&name) {
-            println!("No todolist '{}'", &name);
-            exit(1);
+    /// Delete the given list from the ListFile.
+    /// Confirms user selection with a list name retype.
+    /// ### Returns
+    /// Result indicating success of list deletion
+    pub fn delete_list(&mut self, name: &str) -> Result<(), ListError> {
+        // confirm that the list exists
+        if !self.lists.contains_key(name) {
+            return Err(ListError::NonexistentListName { name: name.to_string() })
         }
 
         // prompt user to confirm delete
-        print!("Please confirm the delete by typing the list name: ");
-        stdout().flush().unwrap();
+        print!("Please confirm list deletion by re-typing the list name: ");
+        io::stdout().flush().unwrap();
         let mut input = String::new();
-        stdin().read_line(&mut input).unwrap();
-
+        io::stdin().read_line(&mut input).unwrap();
         let input = input.trim();  // remove whitespace
 
         // ensure input matches
         if input != name {
-            println!("Cancelling deletion since names don't match");
-            exit(1);
+            return Err(ListError::FailedDeleteConfirmation { entered: input.to_string(), requested: name.to_string() })
         }
 
         // delete list
-        self.lists.remove(&name);
+        self.lists.remove(name);
 
-        // if deleted list was focused, shift focus
-        let mut names: Vec<&String> = self.lists.keys().collect();
-        names.sort();
-        if names.len() == 0 {
-            self.focused = None;
-        } else {
-            self.focused = Some(names.get(0).unwrap().to_string());
+        // if no focus, or focused list is the one being deleted, shift focus
+        if self.focused.is_none() || self.focused.as_ref().unwrap() == name {
+            // sort remaining lists
+            let mut names: Vec<&String> = self.lists.keys().collect();
+            names.sort();
+            // set new focus
+            if names.is_empty() {
+                self.focused = None;
+            } else {
+                self.focused = Some(names.first().unwrap().to_string());
+            }
         }
-
-        println!("Successfully deleted '{}'", name);
+        Ok(())
     }
 
     /// Shifts focused list to the given
@@ -219,6 +220,17 @@ pub mod errors {
         #[error("Cannot create list named {name:?}, a list already exists with this name.")]
         DuplicateListName {
             name: String,
+        },
+        /// Attempting to delete a list which doesn't exist
+        #[error("Cannot delete list named {name:?}, no such list exists")]
+        NonexistentListName {
+            name: String,
+        },
+        /// Deletion confirmation did not match
+        #[error("Cannot delete list; List name entered {entered:?} does not match requested deletion {requested:?}.")]
+        FailedDeleteConfirmation {
+            entered: String,
+            requested: String,
         },
     }
 }

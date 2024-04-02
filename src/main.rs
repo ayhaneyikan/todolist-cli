@@ -108,7 +108,6 @@ fn main() {
 
     match CLI::parse().command {
         Command::Create { name } => {
-            // validate list name
             ensure_valid_list_name(&name);
 
             // read in listfile
@@ -118,7 +117,7 @@ fn main() {
             match list_file.create_list(&name) {
                 Ok(_) => println!("Created todolist '{}'", name),
                 Err(e) => {
-                    eprintln!("Error: {:?}", e);
+                    println!("Error: {}", e);
                     std::process::exit(1)
                 }
             }
@@ -134,7 +133,13 @@ fn main() {
             let mut list_file = ListFile::from_file(&todolists_path);
 
             // delete desired list
-            list_file.delete_list(name);
+            match list_file.delete_list(&name) {
+                Ok(_) => println!("Successfully deleted '{}'", name),
+                Err(e) => {
+                    println!("Error: {}", e);
+                    std::process::exit(1)
+                }
+            }
 
             // write todolist file
             list_file.to_file(&todolists_path);
@@ -164,7 +169,7 @@ fn main() {
 
             // check if there are any lists
             if names.len() == 0 {
-                println!("You have no lists");
+                println!("You have no lists, use `todo create <list-name>` to create one.");
                 std::process::exit(1);
             }
 
