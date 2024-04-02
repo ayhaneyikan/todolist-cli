@@ -129,7 +129,7 @@ fn main() {
         Command::Delete { name } => {
             ensure_valid_list_name(&name);
 
-            // read in todolist file
+            // read in listfile
             let mut list_file = ListFile::from_file(&todolists_path);
 
             // delete desired list
@@ -148,7 +148,7 @@ fn main() {
         Command::Focus { name } => {
             ensure_valid_list_name(&name);
 
-            // read in todolist file
+            // read in listfile
             let mut list_file = ListFile::from_file(&todolists_path);
 
             // shift focus
@@ -162,22 +162,21 @@ fn main() {
         }
 
         Command::List | Command::Ls => {
-            // read in todolist file
+            // read in listfile
             let list_file = ListFile::from_file(&todolists_path);
             
-            // collect list names
+            // confirm there is at least one list
             let mut names: Vec<&String> = list_file.lists.keys().collect();
-            // sort list names
-            names.sort();
-
-            // check if there are any lists
-            if names.len() == 0 {
-                println!("You have no lists, use `todo create <list-name>` to create one.");
+            if names.is_empty() {
+                eprintln!("You have no lists, use `todo create <list-name>` to create one.");
                 std::process::exit(1);
             }
 
+            // retrieve focused list
             let focus = list_file.focused.unwrap();
 
+            // print lists in alphabetical order
+            names.sort();
             for n in names {
                 if n == &focus {
                     println!("* {n} *");
@@ -190,10 +189,10 @@ fn main() {
 
 
         Command::Tasks | Command::Ts => {
-            // read in todolist file
+            // read in listfile
             let mut list_file = ListFile::from_file(&todolists_path);
 
-            // access focused todolist
+            // retrieve focused TodoList
             let list = list_file.get_focused();
 
             // print tasks
@@ -206,10 +205,10 @@ fn main() {
         },
         
         Command::Add { task } => {
-            // read in todolist file
+            // read in listfile
             let mut list_file = ListFile::from_file(&todolists_path);
             
-            // access focused todolist
+            // retrieve focused TodoList
             let list = list_file.get_focused();
             
             // add new task
@@ -220,10 +219,10 @@ fn main() {
         },
 
         Command::Drop { index } => {
-            // read in todolist file
+            // read in listfile
             let mut list_file = ListFile::from_file(&todolists_path);
 
-            // access focused todolist
+            // retrieve focused TodoList
             let list = list_file.get_focused();
 
             // drop tasks
@@ -234,10 +233,10 @@ fn main() {
         },
         
         Command::Done { index } => {
-            // read in todolist file
+            // read in listfile
             let mut list_file = ListFile::from_file(&todolists_path);
 
-            // access focused todolist
+            // retrieve focused TodoList
             let list = list_file.get_focused();
 
             // mark tasks as done
@@ -247,10 +246,10 @@ fn main() {
             list_file.to_file(&todolists_path);
         },
         Command::Undo { index } => {
-            // read in todolist file
+            // read in listfile
             let mut list_file = ListFile::from_file(&todolists_path);
 
-            // access focused todolist
+            // retrieve focused TodoList
             let list = list_file.get_focused();
 
             // mark tasks as undone

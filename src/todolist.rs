@@ -115,20 +115,19 @@ impl ListFile {
         Ok(())
     }
 
-    /// Returns TodoList currently focused
-    /// Exits with error if no list is focused
+    /// Returns currently focused TodoList.
+    /// ### Returns
+    /// TodoList or ListError
     pub fn get_focused(&mut self) -> &mut TodoList {
-        // check that there's a focused list
+        // confirm there's a focused list
         if self.focused.is_none() {
-            println!("You have no lists");
-            exit(1);
+            eprintln!("You have no lists, use `todo create <list-name>` to create one.");
+            std::process::exit(1)
         }
 
-        // access list
+        // retrieve requested TodoList
         self.lists.get_mut(self.focused.as_ref().unwrap()).unwrap()
     }
-
-    
 }
 
 
