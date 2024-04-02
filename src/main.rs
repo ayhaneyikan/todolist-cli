@@ -117,7 +117,7 @@ fn main() {
             match list_file.create_list(&name) {
                 Ok(_) => println!("Created todolist '{}'", name),
                 Err(e) => {
-                    println!("Error: {}", e);
+                    eprintln!("Error: {}", e);
                     std::process::exit(1)
                 }
             }
@@ -136,7 +136,7 @@ fn main() {
             match list_file.delete_list(&name) {
                 Ok(_) => println!("Successfully deleted '{}'", name),
                 Err(e) => {
-                    println!("Error: {}", e);
+                    eprintln!("Error: {}", e);
                     std::process::exit(1)
                 }
             }
@@ -152,8 +152,11 @@ fn main() {
             let mut list_file = ListFile::from_file(&todolists_path);
 
             // shift focus
-            list_file.shift_focus(name);
-            
+            if let Err(e) = list_file.shift_focus(&name) {
+                eprintln!("Error: {}", e);
+                std::process::exit(1)
+            }
+
             // write todolist file
             list_file.to_file(&todolists_path);
         }

@@ -101,17 +101,18 @@ impl ListFile {
         Ok(())
     }
 
-    /// Shifts focused list to the given
-    /// Exits with error if list doesn't exist
-    pub fn shift_focus(&mut self, name: String) {
-        // check that list exists
-        if !self.lists.contains_key(&name) {
-            println!("No todolist '{}'", &name);
-            exit(1);
+    /// Shifts focus to the given list.
+    /// ### Returns
+    /// Result indicating success of focus change
+    pub fn shift_focus(&mut self, name: &str) -> Result<(), ListError> {
+        // confirm that the list exists
+        if !self.lists.contains_key(name) {
+            return Err(ListError::NonexistentListName { name: name.to_string() })
         }
 
         // shift focus
-        self.focused = Some(name);
+        self.focused = Some(name.to_string());
+        Ok(())
     }
 
     /// Returns TodoList currently focused
