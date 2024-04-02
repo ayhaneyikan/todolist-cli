@@ -1,14 +1,21 @@
-use std::{collections::HashMap, process::exit, io::{stdin, stdout, Write}, fmt::Display};
+use std::{collections::HashMap, fmt::Display, io::{stdin, stdout, Write}, process::exit};
 
 use serde::{Serialize, Deserialize};
 
+use self::errors::ListError;
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ListFile {
-    pub focused: Option<String>,  /* rethink what this will be */
+    pub focused: Option<String>,
     pub lists: HashMap<String, TodoList>,
 }
 
 impl ListFile {
+    /// Creates a new instance of a ListFile.
+    /// This is only expected to happen when no ListFile is found in the user's home directory.
+    /// 
+    /// ### Returns
+    /// New ListFile instance
     pub fn new() -> Self {
         ListFile {
             focused: None,
@@ -16,47 +23,45 @@ impl ListFile {
         }
     }
 
-    /// Create ListFile from serialized file
-    /// Exits with error if file does not exist
-    pub fn from_file(arg: &str) -> Self {
-        // check that file exists
-        if !std::path::Path::new(arg).exists() {
-            println!("Todolist has not been initialized");
-            exit(1);
+    /// Serializes ListFile and writes it to file
+    pub fn to_file(&self, file_path: &str) {
+        let encoded = bincode::serialize(&self).expect("Error: failed to serialize ListFile");
+        // overwrite old file
+        std::fs::write(file_path, encoded).expect("Error: failed to write serialized ListFile to file");
+    }
+
+    /// Read from file and deserialize ListFile.
+    /// 
+    /// ### Returns
+    /// Result indicating success of read and deserialization
+    pub fn from_file(file_path: &str) -> Self {
+        // confirm that the listfile exists
+        if !std::path::Path::new(file_path).exists() {
+            eprintln!("Error: ListFile {} does not exist. Todolists may have failed to initialize.", file_path);
+            std::process::exit(1)
         }
 
-        // read file contents
-        let contents = std::fs::read_to_string(arg)
-            .expect("Something went wrong reading the todolist file");
-
-        bincode::deserialize(&contents.as_bytes()).unwrap()
+        // read file contents and deserialize
+        let contents = std::fs::read_to_string(file_path).expect("Error: failed to read ListFile from file");
+        bincode::deserialize(contents.as_bytes()).expect("Error: failed to deserialize ListFile")
     }
 
     /// Add a new list to the listfile
     /// Exits with error if list already exists
-    pub fn add_list(&mut self, name: String) {
-        // check that list doesn't already exist
-        if self.lists.contains_key(&name) {
-            println!("Todolist '{}' already exists", name);
-            exit(1);
+    pub fn create_list(&mut self, name: &str) -> Result<(), ListError>{
+        // confirm that list name is unique
+        if self.lists.contains_key(name) {
+            return Err(ListError::DuplicateListName { name: name.to_string() })
         }
-        
+
         // add list
-        self.lists.insert(name.clone(), TodoList::new(name.clone()));
+        self.lists.insert(name.to_string(), TodoList::new(name.to_string()));
 
         // set as focused list if no list is focused
         if self.focused.is_none() {
-            self.focused = Some(name.clone());
+            self.focused = Some(name.to_string());
         }
-        println!("Created todolist '{}'", name);
-    }
-
-    /// Writes serialized ListFile to file
-    pub fn to_file(&self, arg: &str) {
-        // serialize self
-        let encoded = bincode::serialize(&self).unwrap();
-        // write to file (overwrites old file)
-        std::fs::write(arg, encoded).unwrap();
+        Ok(())
     }
 
     /// Deletes list with given name
@@ -205,5 +210,18 @@ pub struct Task {
 impl Display for Task {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} {}", if self.complete { "✓" } else { "✕" }, self.title)
+    }
+}
+
+pub mod errors {
+    use thiserror::Error;
+
+    #[derive(Error, Debug)]
+    pub enum ListError {
+        /// Attempting to create a list with a used name
+        #[error("Cannot create list named {name:?}, a list already exists with this name.")]
+        DuplicateListName {
+            name: String,
+        },
     }
 }
