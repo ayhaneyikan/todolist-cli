@@ -1,25 +1,19 @@
-use std::process::exit;
-
 use clap::{Parser, Subcommand};
 use regex::Regex;
 
 mod todolist;
 use crate::todolist::ListFile;
 
-#[derive(Debug, Clone)]
-#[derive(Parser)]
-#[command(name="Todo", author, version, about)]
+#[derive(Debug, Clone, Parser)]
+#[command(name="Todo", author="Ayhan Eyikan", version, about)]
 struct CLI {
     #[command(subcommand)]
     command: Command,
 }
 
 
-#[derive(Debug, Clone)]
-#[derive(Subcommand)]
+#[derive(Debug, Clone, Subcommand)]
 enum Command {
-    /// Initialize directory to contain todolists
-    Init,
     /// Create new list
     Create {
         /// Name of the new list
@@ -80,64 +74,68 @@ todo list
 todo focus school
 todo add 'proj 1'
 todo add 'task1 for this class' 'task2 for other class'
- */
+*/
 
-
- fn ensure_valid_list_name(name: &String) {
+fn ensure_valid_list_name(name: &String) {
     // create regex for list name validation
     let regex = Regex::new(r"^[a-zA-Z0-9]([a-zA-Z0-9-_]*[a-zA-Z0-9])?$").unwrap();
 
     // compare against regexp
     if !regex.is_match(&name) {
-        println!("Invalid todolist name '{}'", name);
+        println!("Invalid todolist name: '{}'", name);
         println!("Todolist names must start and end with a letter or number, and may only contain only letters, numbers, hyphens, and underscores");
-        exit(1);
+        std::process::exit(1);
     }
 }
 
 fn main() {
-    let user_home = home::home_dir().expect("Unable to locate your home directory");
-    let todolists_path = format!("{}/.todolists", user_home.display());
+    // attempt to retrieve a path to the todolists file within the user's home directory
+    let todolists_path = match home::home_dir() {
+        Some(home_path) if !home_path.as_os_str().is_empty() => format!("{}/.todolists", home_path.display()),
+        _ => {
+            eprintln!("Error: could not locate your home directory");
+            std::process::exit(1)
+        }
+    };
+
+    // initialize .todolists file if it doesn't already exist
+    if !std::path::Path::new(&todolists_path).exists() {
+        ListFile::new().to_file(&todolists_path);
+    }
+
+    //
+    // parse user command passed in
 
     match CLI::parse().command {
-        Command::Init => {
-            // check if already initialized
-            if std::path::Path::new(&todolists_path).exists() {
-                println!("Todolist has already been initialized");
-                exit(1);
-            }
-
-            // create new list file
-            let list_file = ListFile::new();
-            // serialize with bincode
-            let encoded = bincode::serialize(&list_file).unwrap();
-            // write to file
-            std::fs::write(todolists_path, encoded).unwrap();
-            println!("Todolists initialized");
-        },
-
         Command::Create { name } => {
+            // validate list name
             ensure_valid_list_name(&name);
 
-            // read in todolist file
+            // read in listfile
             let mut list_file = ListFile::from_file(&todolists_path);
 
-            // create new list representation
-            list_file.add_list(name);
-            
+            // attempt to create list
+            match list_file.create_list(&name) {
+                Ok(_) => println!("Created todolist '{}'", name),
+                Err(e) => {
+                    eprintln!("Error: {:?}", e);
+                    std::process::exit(1)
+                }
+            }
+
             // write todolist file
             list_file.to_file(&todolists_path);
         },
-        
+
         Command::Delete { name } => {
             ensure_valid_list_name(&name);
-            
+
             // read in todolist file
             let mut list_file = ListFile::from_file(&todolists_path);
-            
+
             // delete desired list
             list_file.delete_list(name);
-            
+
             // write todolist file
             list_file.to_file(&todolists_path);
         },
@@ -154,7 +152,7 @@ fn main() {
             // write todolist file
             list_file.to_file(&todolists_path);
         }
-        
+
         Command::List | Command::Ls => {
             // read in todolist file
             let list_file = ListFile::from_file(&todolists_path);
@@ -167,7 +165,7 @@ fn main() {
             // check if there are any lists
             if names.len() == 0 {
                 println!("You have no lists");
-                exit(1);
+                std::process::exit(1);
             }
 
             let focus = list_file.focused.unwrap();
