@@ -13,7 +13,6 @@ pub struct ListFile {
 impl ListFile {
     /// Creates a new instance of a ListFile.
     /// This is only expected to happen when no ListFile is found in the user's home directory.
-    /// 
     /// ### Returns
     /// New ListFile instance
     pub fn new() -> Self {
@@ -31,9 +30,6 @@ impl ListFile {
     }
 
     /// Read from file and deserialize ListFile.
-    /// 
-    /// ### Returns
-    /// Result indicating success of read and deserialization
     pub fn from_file(file_path: &str) -> Self {
         // confirm that the listfile exists
         if !std::path::Path::new(file_path).exists() {
@@ -46,8 +42,9 @@ impl ListFile {
         bincode::deserialize(contents.as_bytes()).expect("Error: failed to deserialize ListFile")
     }
 
-    /// Add a new list to the listfile
-    /// Exits with error if list already exists
+    /// Create new list within the ListFile.
+    /// ### Returns
+    /// Result indicating success of list creation
     pub fn create_list(&mut self, name: &str) -> Result<(), ListError>{
         // confirm that list name is unique
         if self.lists.contains_key(name) {
