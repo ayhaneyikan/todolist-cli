@@ -2,9 +2,10 @@ use std::process::exit;
 
 use clap::{Parser, Subcommand};
 use regex::Regex;
+use utils::date::Date;
 
-mod todolist;
-use crate::todolist::ListFile;
+mod utils;
+use crate::utils::{todolist::ListFile, date::parse_date};
 
 #[derive(Debug, Clone)]
 #[derive(Parser)]
@@ -41,14 +42,26 @@ enum Command {
     Ls,
 
     /// Lists tasks within focused todolist
-    Tasks,
+    Tasks {
+        /// List tasks from all todolists
+        #[arg(short, long)]
+        all: bool,
+    },
     /// Lists tasks within focused todolist
-    Ts,
+    Ts {
+        /// List tasks from all todolists
+        #[arg(short, long)]
+        all: bool,
+    },
     /// Add a task to the focused todolist
     Add {
         /// Task(s) as strings to add to the focused list
         #[arg(required=true)]
         task: Vec<String>,
+
+        /// Task(s) due date
+        #[arg(short, long, value_parser = parse_date)]
+        date: Option<Date>,
     },
     /// Drops given task(s) from the focused todolist
     Drop {
@@ -72,14 +85,14 @@ enum Command {
 
 
 /*
- -- store all lists in one file in current directory
- -- track current (focused) list
 
-todo create school
-todo list
-todo focus school
-todo add 'proj 1'
-todo add 'task1 for this class' 'task2 for other class'
+    MINI DEV LIST
+
+    - interesting discussion of autocompletions
+        https://kbknapp.dev/shell-completions/
+
+
+
  */
 
 
@@ -97,7 +110,7 @@ todo add 'task1 for this class' 'task2 for other class'
 
 fn main() {
     let user_home = home::home_dir().expect("Unable to locate your home directory");
-    let todolists_path = format!("{}/.todolists", user_home.display());
+    let todolists_path: String = format!("{}/.todolists", user_home.display());
 
     match CLI::parse().command {
         Command::Init => {
@@ -182,32 +195,41 @@ fn main() {
         }
 
 
-
-        Command::Tasks | Command::Ts => {
+        Command::Tasks { all } | Command::Ts { all } => {
             // read in todolist file
-            let mut list_file = ListFile::from_file(&todolists_path);
+            let list_file = ListFile::from_file(&todolists_path);
 
-            // access focused todolist
-            let list = list_file.get_focused();
+            match all {
+                true => {
+                    // print all tasks with focused task first
+                    let focused = list_file.get_focused();
+                    focused.print_tasks();
+                    // print rest of tasks
+                    for (name, list) in &list_file.lists {
+                        if *name != focused.name {
+                            list.print_tasks();
+                        }
+                    }
+                },
+                false => {
+                    // access focused todolist
+                    let list = list_file.get_focused();
 
-            // print tasks
-            let mut i = 1;
-            println!("-- {} --", list.name);
-            for t in &list.tasks {
-                println!("{i}| {t}");
-                i += 1;
+                    // print tasks
+                    list.print_tasks();
+                },
             }
         },
         
-        Command::Add { task } => {
+        Command::Add { task, date } => {
             // read in todolist file
             let mut list_file = ListFile::from_file(&todolists_path);
             
             // access focused todolist
-            let list = list_file.get_focused();
-            
+            let list = list_file.get_mut_focused();
+
             // add new task
-            list.add_tasks(task);
+            list.add_tasks(task, date);
             
             // write todolist file
             list_file.to_file(&todolists_path);
@@ -218,7 +240,7 @@ fn main() {
             let mut list_file = ListFile::from_file(&todolists_path);
 
             // access focused todolist
-            let list = list_file.get_focused();
+            let list = list_file.get_mut_focused();
 
             // drop tasks
             list.drop_tasks(index);
@@ -232,7 +254,7 @@ fn main() {
             let mut list_file = ListFile::from_file(&todolists_path);
 
             // access focused todolist
-            let list = list_file.get_focused();
+            let list = list_file.get_mut_focused();
 
             // mark tasks as done
             list.update_completions(index, true);
@@ -240,12 +262,13 @@ fn main() {
             // write todolist file
             list_file.to_file(&todolists_path);
         },
+
         Command::Undo { index } => {
             // read in todolist file
             let mut list_file = ListFile::from_file(&todolists_path);
 
             // access focused todolist
-            let list = list_file.get_focused();
+            let list = list_file.get_mut_focused();
 
             // mark tasks as undone
             list.update_completions(index, false);

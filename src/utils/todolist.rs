@@ -1,6 +1,8 @@
-use std::{collections::HashMap, process::exit, io::{stdin, stdout, Write}, fmt::Display};
-
+use std::{collections::HashMap, process::exit, io::{stdin, stdout, Write, Read}, fmt::Display, fs::File};
 use serde::{Serialize, Deserialize};
+
+use crate::utils::date::Date;
+
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ListFile {
@@ -18,18 +20,25 @@ impl ListFile {
 
     /// Create ListFile from serialized file
     /// Exits with error if file does not exist
+    /// arg
     pub fn from_file(arg: &str) -> Self {
+        // create path
+        let path = std::path::Path::new(arg);
+        
         // check that file exists
-        if !std::path::Path::new(arg).exists() {
+        if !path.exists() {
             println!("Todolist has not been initialized");
             exit(1);
         }
 
-        // read file contents
-        let contents = std::fs::read_to_string(arg)
-            .expect("Something went wrong reading the todolist file");
+        // open file and read contents
+        let mut file_content: Vec<u8> = Vec::new();
+        let mut file = File::open(path).expect("Unable to open file");
 
-        bincode::deserialize(&contents.as_bytes()).unwrap()
+        file.read_to_end(&mut file_content).expect("Unable to read file");
+
+        // deserialize file contents
+        bincode::deserialize(&file_content).unwrap()
     }
 
     /// Add a new list to the listfile
@@ -79,7 +88,7 @@ impl ListFile {
 
         // ensure input matches
         if input != name {
-            println!("Cancelling deletion since names don't match");
+            println!("Names don't match: cancelling deletion");
             exit(1);
         }
 
@@ -113,7 +122,20 @@ impl ListFile {
 
     /// Returns TodoList currently focused
     /// Exits with error if no list is focused
-    pub fn get_focused(&mut self) -> &mut TodoList {
+    pub fn get_focused(&self) -> &TodoList {
+        // check that there's a focused list
+        if self.focused.is_none() {
+            println!("You have no lists");
+            exit(1);
+        }
+
+        // access list
+        self.lists.get(self.focused.as_ref().unwrap()).unwrap()
+    }
+
+    /// Returns TodoList currently focused
+    /// Exits with error if no list is focused
+    pub fn get_mut_focused(&mut self) -> &mut TodoList {
         // check that there's a focused list
         if self.focused.is_none() {
             println!("You have no lists");
@@ -145,12 +167,13 @@ impl TodoList {
     }
 
     /// Add task(s) to the todolist
-    pub fn add_tasks(&mut self, tasks: Vec<String>) {
+    pub fn add_tasks(&mut self, tasks: Vec<String>, date: Option<Date>) {
         for t in tasks {
             self.tasks.push(
                 Task {
                     title: t,
                     complete: false,
+                    date: date.clone(),
                 }
             )
         }
@@ -193,17 +216,31 @@ impl TodoList {
             }
         }
     }
+
+    /// Print all tasks in the todolist
+    pub fn print_tasks(&self) {
+        // count digits in length of list to properly space indices
+        let digits = self.tasks.len().to_string().len();
+
+        println!("-- {} --", self.name);
+        for (i, t) in self.tasks.iter().enumerate() {
+            println!("{: <digits$}| {}", i + 1, t);
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Task {
     pub title: String,
-    // pub due: String,
+    pub date: Option<Date>,
     pub complete: bool,
 }
 
 impl Display for Task {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} {}", if self.complete { "✓" } else { "✕" }, self.title)
+        match self.date {
+            Some(d) => write!(f, "{} [{}] {}", if self.complete { "✓" } else { "✕" }, d, self.title),
+            None => write!(f, "{} {}", if self.complete { "✓" } else { "✕" }, self.title),
+        }
     }
 }
