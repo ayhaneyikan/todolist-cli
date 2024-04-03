@@ -1,8 +1,9 @@
 use std::{collections::HashMap, fmt::Display, io::{self, Write}};
-
 use serde::{Serialize, Deserialize};
-
 use self::errors::ListError;
+
+use crate::utils::date::Date;
+
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ListFile {
@@ -124,10 +125,22 @@ impl ListFile {
         Ok(())
     }
 
-    /// Returns currently focused TodoList.
+    /// Returns immutable ref to the currently focused TodoList.
     /// ### Returns
-    /// TodoList or ListError
-    pub fn get_focused(&mut self) -> Result<&mut TodoList, ListError> {
+    /// &TodoList or ListError
+    pub fn get_focused(&self) -> Result<&TodoList, ListError> {
+        // retrieve requested TodoList
+        if let Some(list) = self.focused.as_ref() {
+            Ok(self.lists.get(list).unwrap())
+        } else {
+            Err(ListError::NoFocusedList)
+        }
+    }
+
+    /// Returns mutable ref to the currently focused TodoList.
+    /// ### Returns
+    /// &mut TodoList or ListError
+    pub fn get_mut_focused(&mut self) -> Result<&mut TodoList, ListError> {
         // retrieve requested TodoList
         if let Some(list) = self.focused.as_ref() {
             Ok(self.lists.get_mut(list).unwrap())
@@ -154,12 +167,13 @@ impl TodoList {
     }
 
     /// Add task(s) to the todolist
-    pub fn add_tasks(&mut self, tasks: Vec<String>) {
+    pub fn add_tasks(&mut self, tasks: Vec<String>, date: Option<Date>) {
         for t in tasks {
             self.tasks.push(
                 Task {
                     title: t,
                     complete: false,
+                    date: date.clone(),
                 }
             )
         }
@@ -204,20 +218,35 @@ impl TodoList {
             }
         }
     }
+
+    /// Print all tasks in the todolist
+    pub fn print_tasks(&self) {
+        // count digits in length of list to properly space indices
+        let digits = self.tasks.len().to_string().len();
+
+        println!("-- {} --", self.name);
+        for (i, t) in self.tasks.iter().enumerate() {
+            println!("{: <digits$}| {}", i + 1, t);
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Task {
     pub title: String,
-    // pub due: String,
+    pub date: Option<Date>,
     pub complete: bool,
 }
 
 impl Display for Task {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} {}", if self.complete { "✓" } else { "✕" }, self.title)
+        match self.date {
+            Some(d) => write!(f, "{} [{}] {}", if self.complete { "✓" } else { "✕" }, d, self.title),
+            None => write!(f, "{} {}", if self.complete { "✓" } else { "✕" }, self.title),
+        }
     }
 }
+
 
 pub mod errors {
     use thiserror::Error;

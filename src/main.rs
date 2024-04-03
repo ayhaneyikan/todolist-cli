@@ -1,8 +1,9 @@
 use clap::{Parser, Subcommand};
 use regex::Regex;
+use utils::date::Date;
 
-mod todolist;
-use crate::todolist::ListFile;
+mod utils;
+use crate::utils::{todolist::ListFile, date::parse_date};
 
 #[derive(Debug, Clone, Parser)]
 #[command(name="Todo", author="Ayhan Eyikan", version, about)]
@@ -35,14 +36,26 @@ enum Command {
     Ls,
 
     /// Lists tasks within focused todolist
-    Tasks,
+    Tasks {
+        /// List tasks from all todolists
+        #[arg(short, long)]
+        all: bool,
+    },
     /// Lists tasks within focused todolist
-    Ts,
+    Ts {
+        /// List tasks from all todolists
+        #[arg(short, long)]
+        all: bool,
+    },
     /// Add a task to the focused todolist
     Add {
         /// Task(s) as strings to add to the focused list
         #[arg(required=true)]
         task: Vec<String>,
+
+        /// Task(s) due date
+        #[arg(short, long, value_parser = parse_date)]
+        date: Option<Date>,
     },
     /// Drops given task(s) from the focused todolist
     Drop {
@@ -66,15 +79,14 @@ enum Command {
 
 
 /*
- -- store all lists in one file in current directory
- -- track current (focused) list
 
-todo create school
-todo list
-todo focus school
-todo add 'proj 1'
-todo add 'task1 for this class' 'task2 for other class'
-*/
+    MINI DEV LIST
+
+    - interesting discussion of autocompletions
+        https://kbknapp.dev/shell-completions/
+
+
+ */
 
 fn ensure_valid_list_name(name: &String) {
     // create regex for list name validation
@@ -109,6 +121,9 @@ fn main() {
     // parse user command passed in
 
     match CLI::parse().command {
+        //
+        // LIST_FILE COMMANDS
+        //
         Command::Create { name } => {
             ensure_valid_list_name(&name);
 
@@ -161,7 +176,7 @@ fn main() {
 
             // write todolist file
             list_file.to_file(&todolists_path);
-        }
+        },
 
         Command::List | Command::Ls => {
             // read in listfile
@@ -186,54 +201,58 @@ fn main() {
                     println!("  {n}");
                 }
             }
-        }
+        },
 
+        //
+        // list commands
+        //
+        Command::Tasks { all } | Command::Ts { all } => {
+            // read in todolist file
+            let list_file = ListFile::from_file(&todolists_path);
 
-
-        Command::Tasks | Command::Ts => {
-            // read in listfile
-            let mut list_file = ListFile::from_file(&todolists_path);
-
-            // confirm there is at least one list
             if list_file.num_lists() < 1 {
                 eprintln!("{}", NO_LISTS_MSG);
                 std::process::exit(1)
             }
 
             // retrieve focused TodoList
-            let list = match list_file.get_focused() {
+            let focused = match list_file.get_focused() {
                 Ok(list) => list,
                 Err(e) => {
-                    eprintln!("Error: {}", e);
+                    eprintln!("{}", e);
                     std::process::exit(1)
                 }
             };
 
-            // print tasks
-            println!("-- {} --", list.name);
-            let mut task_idx = 1;
-            for task in &list.tasks {
-                println!("{task_idx}| {task}");
-                task_idx += 1;
+            // always print focused todolist
+            focused.print_tasks();
+
+            // print rest of tasks if requested
+            if all {
+                for (name, list) in &list_file.lists {
+                    if *name != focused.name {
+                        list.print_tasks();
+                    }
+                }
             }
         },
 
-        Command::Add { task } => {
+        Command::Add { task, date } => {
             // read in listfile
             let mut list_file = ListFile::from_file(&todolists_path);
-            
+
             // retrieve focused TodoList
-            let list = match list_file.get_focused() {
+            let list = match list_file.get_mut_focused() {
                 Ok(list) => list,
                 Err(e) => {
                     eprintln!("Error: {}", e);
                     std::process::exit(1)
                 }
             };
-            
+
             // add new task
-            list.add_tasks(task);
-            
+            list.add_tasks(task, date);
+
             // write todolist file
             list_file.to_file(&todolists_path);
         },
@@ -243,7 +262,7 @@ fn main() {
             let mut list_file = ListFile::from_file(&todolists_path);
 
             // retrieve focused TodoList
-            let list = match list_file.get_focused() {
+            let list = match list_file.get_mut_focused() {
                 Ok(list) => list,
                 Err(e) => {
                     eprintln!("Error: {}", e);
@@ -263,7 +282,7 @@ fn main() {
             let mut list_file = ListFile::from_file(&todolists_path);
 
             // retrieve focused TodoList
-            let list = match list_file.get_focused() {
+            let list = match list_file.get_mut_focused() {
                 Ok(list) => list,
                 Err(e) => {
                     eprintln!("Error: {}", e);
@@ -277,12 +296,13 @@ fn main() {
             // write todolist file
             list_file.to_file(&todolists_path);
         },
+
         Command::Undo { index } => {
             // read in listfile
             let mut list_file = ListFile::from_file(&todolists_path);
 
             // retrieve focused TodoList
-            let list = match list_file.get_focused() {
+            let list = match list_file.get_mut_focused() {
                 Ok(list) => list,
                 Err(e) => {
                     eprintln!("Error: {}", e);
