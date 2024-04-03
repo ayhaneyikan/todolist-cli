@@ -7,7 +7,7 @@ use serde::{Serialize, Deserialize};
 pub fn parse_date(s: &str) -> Result<Date, String> {
     // full date regex
     let regex = Regex::new(r"^(\d{1,2})(?:\/|-)(\d{1,2})(?:(?:\/|-)(\d{4}|\d{2}))?$").unwrap();
-    
+
     // check if valid format
     if !regex.is_match(s) {
         return Err(String::from("Invalid date format. Must be MM/DD or MM/DD/YYYY"));
