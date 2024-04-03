@@ -103,6 +103,8 @@ fn main() {
         ListFile::new().to_file(&todolists_path);
     }
 
+    const NO_LISTS_MSG: &str = "You have no lists, use `todo create <list-name>` to create one.";
+
     //
     // parse user command passed in
 
@@ -164,21 +166,21 @@ fn main() {
         Command::List | Command::Ls => {
             // read in listfile
             let list_file = ListFile::from_file(&todolists_path);
-            
+
             // confirm there is at least one list
-            let mut names: Vec<&String> = list_file.lists.keys().collect();
+            let mut names: Vec<&String> = list_file.get_list_names();
             if names.is_empty() {
-                eprintln!("You have no lists, use `todo create <list-name>` to create one.");
+                eprintln!("{}", NO_LISTS_MSG);
                 std::process::exit(1);
             }
 
-            // retrieve focused list
-            let focus = list_file.focused.unwrap();
+            // retrieve focused list name
+            let focus = list_file.focused.as_ref().unwrap();
 
             // print lists in alphabetical order
             names.sort();
             for n in names {
-                if n == &focus {
+                if n == focus {
                     println!("* {n} *");
                 } else {
                     println!("  {n}");
@@ -192,24 +194,42 @@ fn main() {
             // read in listfile
             let mut list_file = ListFile::from_file(&todolists_path);
 
+            // confirm there is at least one list
+            if list_file.num_lists() < 1 {
+                eprintln!("{}", NO_LISTS_MSG);
+                std::process::exit(1)
+            }
+
             // retrieve focused TodoList
-            let list = list_file.get_focused();
+            let list = match list_file.get_focused() {
+                Ok(list) => list,
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    std::process::exit(1)
+                }
+            };
 
             // print tasks
-            let mut i = 1;
             println!("-- {} --", list.name);
-            for t in &list.tasks {
-                println!("{i}| {t}");
-                i += 1;
+            let mut task_idx = 1;
+            for task in &list.tasks {
+                println!("{task_idx}| {task}");
+                task_idx += 1;
             }
         },
-        
+
         Command::Add { task } => {
             // read in listfile
             let mut list_file = ListFile::from_file(&todolists_path);
             
             // retrieve focused TodoList
-            let list = list_file.get_focused();
+            let list = match list_file.get_focused() {
+                Ok(list) => list,
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    std::process::exit(1)
+                }
+            };
             
             // add new task
             list.add_tasks(task);
@@ -223,7 +243,13 @@ fn main() {
             let mut list_file = ListFile::from_file(&todolists_path);
 
             // retrieve focused TodoList
-            let list = list_file.get_focused();
+            let list = match list_file.get_focused() {
+                Ok(list) => list,
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    std::process::exit(1)
+                }
+            };
 
             // drop tasks
             list.drop_tasks(index);
@@ -237,7 +263,13 @@ fn main() {
             let mut list_file = ListFile::from_file(&todolists_path);
 
             // retrieve focused TodoList
-            let list = list_file.get_focused();
+            let list = match list_file.get_focused() {
+                Ok(list) => list,
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    std::process::exit(1)
+                }
+            };
 
             // mark tasks as done
             list.update_completions(index, true);
@@ -250,7 +282,13 @@ fn main() {
             let mut list_file = ListFile::from_file(&todolists_path);
 
             // retrieve focused TodoList
-            let list = list_file.get_focused();
+            let list = match list_file.get_focused() {
+                Ok(list) => list,
+                Err(e) => {
+                    eprintln!("Error: {}", e);
+                    std::process::exit(1)
+                }
+            };
 
             // mark tasks as undone
             list.update_completions(index, false);

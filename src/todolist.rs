@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Display, io::{self, Write}, process::exit};
+use std::{collections::HashMap, fmt::Display, io::{self, Write}};
 
 use serde::{Serialize, Deserialize};
 
@@ -101,6 +101,15 @@ impl ListFile {
         Ok(())
     }
 
+    /// Retrieves the number of lists available
+    pub fn num_lists(&self) -> usize {
+        self.lists.len()
+    }
+    /// Returns names of the available lists
+    pub fn get_list_names(&self) -> Vec<&String> {
+        self.lists.keys().collect()
+    }
+
     /// Shifts focus to the given list.
     /// ### Returns
     /// Result indicating success of focus change
@@ -118,15 +127,13 @@ impl ListFile {
     /// Returns currently focused TodoList.
     /// ### Returns
     /// TodoList or ListError
-    pub fn get_focused(&mut self) -> &mut TodoList {
-        // confirm there's a focused list
-        if self.focused.is_none() {
-            eprintln!("You have no lists, use `todo create <list-name>` to create one.");
-            std::process::exit(1)
-        }
-
+    pub fn get_focused(&mut self) -> Result<&mut TodoList, ListError> {
         // retrieve requested TodoList
-        self.lists.get_mut(self.focused.as_ref().unwrap()).unwrap()
+        if let Some(list) = self.focused.as_ref() {
+            Ok(self.lists.get_mut(list).unwrap())
+        } else {
+            Err(ListError::NoFocusedList)
+        }
     }
 }
 
@@ -135,7 +142,6 @@ impl ListFile {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TodoList {
     pub name: String,
-
     pub tasks: Vec<Task>,
 }
 
@@ -158,8 +164,10 @@ impl TodoList {
             )
         }
     }
-    
-    /// Helper func to sort, dedup, and reverse a list of usize
+
+    /// Helper func to sort, dedup, and reverse a list of usize.
+    /// Used when receiving multiple indices to remove from the task list.
+    /// Reversing the list allows for save deletion of elements while iterating over tasks.
     fn sort_uniq_reverse(mut l: Vec<usize>) -> Vec<usize> {
         // remove duplicate indices
         l.sort();
@@ -232,5 +240,8 @@ pub mod errors {
             entered: String,
             requested: String,
         },
+        /// Attempted to get focused list when no list is focused
+        #[error("Cannot get focused list; there is none.")]
+        NoFocusedList,
     }
 }
