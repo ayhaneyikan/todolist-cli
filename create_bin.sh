@@ -2,6 +2,6 @@
 
 cargo b --release
 
-sudo cp target/debug/todo /usr/local/bin/
+sudo cp target/release/todo /usr/local/bin/
 
 echo 'Release binary built and copied to /usr/local/bin/'

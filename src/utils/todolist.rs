@@ -1,9 +1,12 @@
-use std::{collections::HashMap, fmt::Display, io::{self, Write}};
-use serde::{Serialize, Deserialize};
 use self::errors::ListError;
+use serde::{Deserialize, Serialize};
+use std::{
+    collections::HashMap,
+    fmt::Display,
+    io::{self, Write},
+};
 
 use crate::utils::date::Date;
-
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ListFile {
@@ -27,33 +30,41 @@ impl ListFile {
     pub fn from_file(file_path: &str) -> Self {
         // confirm that the listfile exists
         if !std::path::Path::new(file_path).exists() {
-            eprintln!("Error: ListFile {} does not exist. Todolists may have failed to initialize.", file_path);
+            eprintln!(
+                "Error: ListFile {} does not exist. Todolists may have failed to initialize.",
+                file_path
+            );
             std::process::exit(1)
         }
 
         // read file contents and deserialize
-        let contents = std::fs::read_to_string(file_path).expect("Error: failed to read ListFile from file");
-        bincode::deserialize(contents.as_bytes()).expect("Error: failed to deserialize ListFile")
+        let contents =
+            std::fs::read_to_string(file_path).expect("Error: failed to read ListFile from file");
+        serde_json::from_str(&contents).expect("Error: failed to deserialize ListFile")
     }
 
     /// Serializes ListFile and writes it to file
     pub fn to_file(&self, file_path: &str) {
-        let encoded = bincode::serialize(&self).expect("Error: failed to serialize ListFile");
+        let encoded = serde_json::to_string(&self).expect("Error: failed to serialize ListFile");
         // overwrite old file
-        std::fs::write(file_path, encoded).expect("Error: failed to write serialized ListFile to file");
+        std::fs::write(file_path, encoded)
+            .expect("Error: failed to write serialized ListFile to file");
     }
 
     /// Create new list within the ListFile.
     /// ### Returns
     /// Result indicating success of list creation
-    pub fn create_list(&mut self, name: &str) -> Result<(), ListError>{
+    pub fn create_list(&mut self, name: &str) -> Result<(), ListError> {
         // confirm that list name is unique
         if self.lists.contains_key(name) {
-            return Err(ListError::DuplicateListName { name: name.to_string() })
+            return Err(ListError::DuplicateListName {
+                name: name.to_string(),
+            });
         }
 
         // add list
-        self.lists.insert(name.to_string(), TodoList::new(name.to_string()));
+        self.lists
+            .insert(name.to_string(), TodoList::new(name.to_string()));
 
         // set as focused list if no list is focused
         if self.focused.is_none() {
@@ -69,7 +80,9 @@ impl ListFile {
     pub fn delete_list(&mut self, name: &str) -> Result<(), ListError> {
         // confirm that the list exists
         if !self.lists.contains_key(name) {
-            return Err(ListError::NonexistentListName { name: name.to_string() })
+            return Err(ListError::NonexistentListName {
+                name: name.to_string(),
+            });
         }
 
         // prompt user to confirm delete
@@ -77,11 +90,14 @@ impl ListFile {
         io::stdout().flush().unwrap();
         let mut input = String::new();
         io::stdin().read_line(&mut input).unwrap();
-        let input = input.trim();  // remove whitespace
+        let input = input.trim(); // remove whitespace
 
         // ensure input matches
         if input != name {
-            return Err(ListError::FailedDeleteConfirmation { entered: input.to_string(), requested: name.to_string() })
+            return Err(ListError::FailedDeleteConfirmation {
+                entered: input.to_string(),
+                requested: name.to_string(),
+            });
         }
 
         // delete list
@@ -117,7 +133,9 @@ impl ListFile {
     pub fn shift_focus(&mut self, name: &str) -> Result<(), ListError> {
         // confirm that the list exists
         if !self.lists.contains_key(name) {
-            return Err(ListError::NonexistentListName { name: name.to_string() })
+            return Err(ListError::NonexistentListName {
+                name: name.to_string(),
+            });
         }
 
         // shift focus
@@ -150,8 +168,6 @@ impl ListFile {
     }
 }
 
-
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TodoList {
     pub name: String,
@@ -169,13 +185,11 @@ impl TodoList {
     /// Add task(s) to the todolist
     pub fn add_tasks(&mut self, tasks: Vec<String>, date: Option<Date>) {
         for t in tasks {
-            self.tasks.push(
-                Task {
-                    title: t,
-                    complete: false,
-                    date: date.clone(),
-                }
-            )
+            self.tasks.push(Task {
+                title: t,
+                complete: false,
+                date,
+            })
         }
     }
 
@@ -186,7 +200,7 @@ impl TodoList {
         // remove duplicate indices
         l.sort();
         l.dedup();
-        l.reverse();  // reverse so that indices don't change
+        l.reverse(); // reverse so that indices don't change
 
         // decrement each value
         for i in l.iter_mut() {
@@ -224,14 +238,18 @@ impl TodoList {
         // count digits in length of list to properly space indices
         let digits = self.tasks.len().to_string().len();
 
+        // sort tasks prior to printing
+        let mut tasks = self.tasks.clone();
+        tasks.sort();
+
         println!("-- {} --", self.name);
-        for (i, t) in self.tasks.iter().enumerate() {
+        for (i, t) in tasks.iter().enumerate() {
             println!("{: <digits$}| {}", i + 1, t);
         }
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq)]
 pub struct Task {
     pub title: String,
     pub date: Option<Date>,
@@ -241,12 +259,40 @@ pub struct Task {
 impl Display for Task {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.date {
-            Some(d) => write!(f, "{} [{}] {}", if self.complete { "✓" } else { "✕" }, d, self.title),
-            None => write!(f, "{} {}", if self.complete { "✓" } else { "✕" }, self.title),
+            Some(d) => write!(
+                f,
+                "{} [{}] {}",
+                if self.complete { "✓" } else { "✕" },
+                d,
+                self.title
+            ),
+            None => write!(
+                f,
+                "{} {}",
+                if self.complete { "✓" } else { "✕" },
+                self.title
+            ),
         }
     }
 }
 
+// sorting impls
+
+impl PartialEq for Task {
+    fn eq(&self, other: &Self) -> bool {
+        self.title == other.title && self.date == other.date && self.complete == other.complete
+    }
+}
+impl PartialOrd for Task {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl Ord for Task {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.date.cmp(&other.date)
+    }
+}
 
 pub mod errors {
     use thiserror::Error;
@@ -255,20 +301,13 @@ pub mod errors {
     pub enum ListError {
         /// Attempting to create a list with a used name
         #[error("Cannot create list named {name:?}, a list already exists with this name.")]
-        DuplicateListName {
-            name: String,
-        },
+        DuplicateListName { name: String },
         /// Attempting to delete a list which doesn't exist
         #[error("Cannot delete list named {name:?}, no such list exists")]
-        NonexistentListName {
-            name: String,
-        },
+        NonexistentListName { name: String },
         /// Deletion confirmation did not match
         #[error("Cannot delete list; List name entered {entered:?} does not match requested deletion {requested:?}.")]
-        FailedDeleteConfirmation {
-            entered: String,
-            requested: String,
-        },
+        FailedDeleteConfirmation { entered: String, requested: String },
         /// Attempted to get focused list when no list is focused
         #[error("Cannot get focused list; there is none.")]
         NoFocusedList,
