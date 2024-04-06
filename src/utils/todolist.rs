@@ -213,6 +213,8 @@ impl TodoList {
     pub fn drop_tasks(&mut self, mut index: Vec<usize>) {
         index = Self::sort_uniq_reverse(index);
 
+        self.tasks.sort();
+
         // drop them from the list
         for i in index {
             if i < self.tasks.len() {
@@ -224,6 +226,8 @@ impl TodoList {
     /// Update task(s) as complete or incomplete
     pub fn update_completions(&mut self, mut index: Vec<usize>, complete: bool) {
         index = Self::sort_uniq_reverse(index);
+
+        self.tasks.sort();
 
         // mark each task as complete
         for i in index {
