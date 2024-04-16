@@ -27,6 +27,8 @@ impl ListFile {
     }
 
     /// Read from file and deserialize ListFile.
+    /// ### Returns
+    /// New ListFile instance from file
     pub fn from_file(file_path: &str) -> Self {
         // confirm that the listfile exists
         if !std::path::Path::new(file_path).exists() {
@@ -43,7 +45,7 @@ impl ListFile {
         serde_json::from_str(&contents).expect("Error: failed to deserialize ListFile")
     }
 
-    /// Serializes ListFile and writes it to file
+    /// Serializes ListFile and writes it to file.
     pub fn to_file(&self, file_path: &str) {
         let encoded = serde_json::to_string(&self).expect("Error: failed to serialize ListFile");
         // overwrite old file
