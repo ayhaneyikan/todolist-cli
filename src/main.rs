@@ -69,6 +69,12 @@ enum Command {
         #[arg(required = true)]
         index: Vec<usize>,
     },
+    /// Marks given task(s) as complete
+    Do {
+        /// Index(ices) of task(s) to mark as complete
+        #[arg(required = true)]
+        index: Vec<usize>,
+    },
     /// Marks given task(s) as incomplete
     Undo {
         /// Index(ices) of task(s) to mark as incomplete
@@ -84,8 +90,16 @@ enum Command {
    - interesting discussion of autocompletions
        https://kbknapp.dev/shell-completions/
 
+   `todo` maybe should display the focused list rather than help info
 
-   `todo` should display the focused list as a shortcut
+   
+   creating new list should focus it
+   create github actions which automate testing and binary release (on push to main)
+   add tests for todolist and date modules
+   color options for old dates and completed/uncompleted tasks
+   sort completed tasks at the end of the list
+   edit feature?
+   maybe some tiered priority system which affects sorting?
 
 */
 
@@ -280,7 +294,7 @@ fn main() {
             list_file.to_file(&todolists_path);
         }
 
-        Command::Done { index } => {
+        Command::Done { index } | Command::Do { index } => {
             // read in listfile
             let mut list_file = ListFile::from_file(&todolists_path);
 
