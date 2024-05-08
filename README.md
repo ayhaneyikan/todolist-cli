@@ -6,7 +6,7 @@ Feel free to try it out by cloning the source and building it locally, or downlo
 
 Primarily the focus of this project is to explore two things:
 1. the Rust programming language
-2. creating a deploying my own executable program on a linux system
+2. creating and deploying my own executable program on a linux system
 
 ## Retrieve Binary
 
