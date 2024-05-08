@@ -119,12 +119,13 @@ todo ts
 # clearly we have no tasks in our list
 # add task(s) to the list
 # we can add multiple at once, but note that they're separated by spaces
-todo add task1 task2 task3
+# lets add a task for each of the three pages we've been assigned for our website
+todo add page1 page2 page3
 todo ts
 # -- my-website --
-# 1| ✕ task1
-# 2| ✕ task2
-# 3| ✕ task3
+# 1| ✕ page1
+# 2| ✕ page2
+# 3| ✕ page3
 
 
 # to add a task with a more descriptive name, use bash quotes (single or double)
@@ -133,9 +134,9 @@ todo add 'Longer description of what we need'
 todo add 'This time I want to add two tasks' "Here's the second one"
 todo ts
 # -- my-website --
-# 1| ✕ task1
-# 2| ✕ task2
-# 3| ✕ task3
+# 1| ✕ page1
+# 2| ✕ page2
+# 3| ✕ page3
 # 4| ✕ Longer description of what we need
 # 5| ✕ This time I want to add two tasks
 # 6| ✕ Here's the second one
@@ -147,9 +148,9 @@ todo drop 6
 todo drop 4 5  # note that indices may change after a previous removal
 todo ts
 # -- my-website --
-# 1| ✕ task1
-# 2| ✕ task2
-# 3| ✕ task3
+# 1| ✕ page1
+# 2| ✕ page2
+# 3| ✕ page3
 ```
 
 #### Completing Tasks
@@ -163,9 +164,9 @@ Mark one or more tasks as completed using...
 todo do 1 2
 todo ts
 # -- my-website --
-# 1| ✓ task1
-# 2| ✓ task2
-# 3| ✕ task3
+# 1| ✓ page1
+# 2| ✓ page2
+# 3| ✕ page3
 ```
 
 Oops! If you accidentally marked a task you shouldn't have, undo it...
@@ -174,9 +175,9 @@ Oops! If you accidentally marked a task you shouldn't have, undo it...
 todo undo 2
 todo ts
 # -- my-website --
-# 1| ✓ task1
-# 2| ✕ task2
-# 3| ✕ task3
+# 1| ✓ page1
+# 2| ✕ page2
+# 3| ✕ page3
 ```
 
 ### Advanced Functionality
@@ -199,45 +200,44 @@ Do this using the `-d` option.
 This option parses common date formats and supports hyphens or forward slashes.
 It will give you feeback if you provide an invalid date.
 ```bash
-todo add some more tasks -d 4-30
+# lets imagine the project is due on the 30th
+todo add 'website complete' 'website deployed' -d 4-30
 todo ts
 # -- my-website --
-# 1| ✓ task1
-# 2| ✕ task2
-# 3| ✕ task3
-# 4| ✕ [04/30] some
-# 5| ✕ [04/30] more
-# 6| ✕ [04/30] tasks
+# 1| ✓ page1
+# 2| ✕ page2
+# 3| ✕ page3
+# 4| ✕ [04/30] website complete
+# 5| ✕ [04/30] website deployed
 
 # tasks are sorted by date
 # lets add a few more dates to see this in action
-todo add before --date 02/14
-todo add after -d 06/25
+# these will ignore our website project example
+todo add 'class start' --date 02/14
+todo add mid-summer -d 06/25
 # -- my-website --
-# 1| ✓ task1
-# 2| ✕ task2
-# 3| ✕ task3
-# 4| ✕ [02/14] before
-# 5| ✕ [04/30] some
-# 6| ✕ [04/30] more
-# 7| ✕ [04/30] tasks
-# 8| ✕ [06/25] after
+# 1| ✓ page1
+# 2| ✕ page2
+# 3| ✕ page3
+# 4| ✕ [02/14] class start
+# 5| ✕ [04/30] website complete
+# 6| ✕ [04/30] website deployed
+# 7| ✕ [06/25] mid-summer
 
 # years are also supported
 # any date without a year specified will be assumed to be within the current year
 todo add old-year -d 03/17/2001
 todo add curr-year -d 03/17/2024
 # -- my-website --
-# 1 | ✓ task1
-# 2 | ✕ task2
-# 3 | ✕ task3
-# 4 | ✕ [03/17/2001] old-year
-# 5 | ✕ [02/14] before
-# 6 | ✕ [03/17/2024] curr-year
-# 7 | ✕ [04/30] some
-# 8 | ✕ [04/30] more
-# 9 | ✕ [04/30] tasks
-# 10| ✕ [06/25] after
+# 1| ✓ page1
+# 2| ✕ page2
+# 3| ✕ page3
+# 4| ✕ [03/17/2001] old-year
+# 5| ✕ [02/14] before
+# 6| ✕ [03/17/2024] curr-year
+# 7| ✕ [04/30] website complete
+# 8| ✕ [04/30] website deployed
+# 9| ✕ [06/25] after
 ```
 
 ---
